@@ -1,0 +1,12 @@
+# Virtual environment
+.venv/
+
+# Scraper output (CSVs)
+output/*.csv
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Credentials - never commit this
+config.py
