@@ -63,8 +63,9 @@ NETCOMP_ACCT = "339259"
 # CRM DATABASE (SQL Server)
 # =============================================================
 DB_CONNECTION_STRING = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "DRIVER={ODBC Driver 18 for SQL Server};"
     "SERVER=aeri-sql-2019;"
     "DATABASE=CCCRM;"
-    "Trusted_Connection=yes;"  # Uses your Windows login (no username/password needed)
+    "Trusted_Connection=yes;"
+    "TrustServerCertificate=yes;"
 )
