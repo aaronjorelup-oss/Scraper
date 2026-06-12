@@ -9,12 +9,12 @@ import os
 
 # Folder where the scraper CSVs will be saved.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(SCRIPT_DIR, "output")
+OUTPUT_DIR = "F:\\Purchasing\\AaronO\\Webscraper\\output"
 
 # Whether to show the browser while scraping.
 # True  = visible browser (good for debugging)
 # False = headless (faster, runs in background, use for cron jobs)
-SHOW_BROWSER = True
+SHOW_BROWSER = False
 
 # How many seconds to wait between part searches (be polite to the sites)
 DELAY_BETWEEN_SEARCHES = 1
@@ -31,7 +31,7 @@ BATCH_PAUSE_MINUTES = 30
 
 # Operating hours (24-hour clock). A new batch only starts inside this window.
 # A batch already in progress is allowed to finish past the end time.
-BUSINESS_HOURS_START = 6     # don't start before 6:00 AM
+BUSINESS_HOURS_START = 3     # don't start before 6:00 AM
 BUSINESS_HOURS_END   = 17    # don't start a new batch at/after 5:00 PM
 
 # Safety ceiling on how many parts a single cycle will ever process.

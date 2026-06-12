@@ -13,3 +13,4 @@ config.py
 
 scraper_state.json
 scraper.lock
+scraper_log.txt
