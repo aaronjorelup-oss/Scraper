@@ -10,3 +10,6 @@ __pycache__/
 
 # Credentials - never commit this
 config.py
+
+scraper_state.json
+scraper.lock
