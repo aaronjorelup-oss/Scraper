@@ -36,7 +36,7 @@ VENV_DIR = ".venv"
 # and re-run this script.
 PACKAGES = [
     "playwright",
-    # "pyodbc",   # <- uncomment when you connect to the CRM database
+    "pyodbc",  
 ]
 
 # Which Playwright browser(s) to download. The scraper only uses Chromium.

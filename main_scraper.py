@@ -16,7 +16,7 @@ OUTPUT:
 import os
 from datetime import datetime
 
-from config import OUTPUT_DIR, SHOW_BROWSER
+from config import OUTPUT_DIR, SHOW_BROWSER, DB_CONNECTION_STRING
 from scrapers import icsource_scraper
 from scrapers import netcomponents_scraper
 
@@ -30,35 +30,84 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_parts_list():
     """
-    Read part numbers to scrape.
+    Fetch unique part numbers from the CRM database.
 
-    Currently reads from input_parts.txt (one per line).
+    Connects to the CCCRM SQL Server database and queries the REQ table
+    for all rows where AUTO_MATCH = 1, returning the unique trimmed part
+    numbers from the FULLPART column.
 
-    LATER: Replace this with a SQL Server query to your CRM.
-    Example of what that will look like:
+    Falls back to input_parts.txt if the database is unreachable, so you
+    can still run the scraper offline or for quick testing.
 
+    Returns:
+        List of unique part number strings, e.g. ["ISL95835IRZ", "LM317T", ...]
+    """
+    try:
         import pyodbc
-        conn = pyodbc.connect(
-            'DRIVER={ODBC Driver 17 for SQL Server};'
-            'SERVER=your_server;DATABASE=your_db;UID=...;PWD=...'
-        )
+    except ImportError:
+        print("WARNING: pyodbc is not installed.")
+        print("         Run: pip install pyodbc")
+        print("         Falling back to input_parts.txt...\n")
+        return _get_parts_from_file()
+
+    try:
+        print("Connecting to CRM database (aeri-sql-2019 / CCCRM)...")
+        conn = pyodbc.connect(DB_CONNECTION_STRING, timeout=10)
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT TOP 10 FullPart
-            FROM WebScraperParts
-            WHERE WebScraped = 0
-            ORDER BY Date_Scraped
-        ''')
-        return [row[0].strip() for row in cursor.fetchall()]
+
+        # LTRIM + RTRIM trims any leading/trailing whitespace from FULLPART.
+        # DISTINCT ensures we only scrape each unique part number once,
+        # even if it appears on many requisition rows.
+        cursor.execute("""
+            SELECT DISTINCT LTRIM(RTRIM(FULLPART)) AS part_number
+            FROM REQ
+            WHERE AUTO_MATCH = 1
+              AND FULLPART IS NOT NULL
+              AND LTRIM(RTRIM(FULLPART)) <> ''
+            ORDER BY part_number
+        """)
+
+        parts = [row.part_number for row in cursor.fetchall()]
+        conn.close()
+
+        print(f"  -> {len(parts)} unique part(s) loaded from database.")
+        return parts
+
+    except Exception as e:
+        # Don't crash the whole run just because the DB is unavailable.
+        # Print a clear warning and fall back to the text file.
+        print(f"WARNING: Could not connect to the CRM database.")
+        print(f"         Error: {e}")
+        print(f"         Falling back to input_parts.txt...\n")
+        return _get_parts_from_file()
+
+
+def _get_parts_from_file():
+    """
+    Read part numbers from input_parts.txt (one per line).
+    Used as a fallback when the database is unavailable, and for testing.
     """
     parts_file = os.path.join(SCRIPT_DIR, "input_parts.txt")
 
     if not os.path.exists(parts_file):
-        print(f"ERROR: {parts_file} not found.")
+        print(f"ERROR: {parts_file} not found and database is unavailable.")
+        print("       Create input_parts.txt with one part number per line,")
+        print("       or ensure the CRM database is reachable.")
         return []
 
     with open(parts_file, "r", encoding="utf-8") as f:
-        return [line.strip() for line in f if line.strip()]
+        lines = [line.strip() for line in f if line.strip()]
+
+    # Deduplicate (same logic as the SQL query) in case the file has repeats
+    seen = set()
+    parts = []
+    for p in lines:
+        if p not in seen:
+            seen.add(p)
+            parts.append(p)
+
+    print(f"  -> {len(parts)} unique part(s) loaded from input_parts.txt.")
+    return parts
 
 
 # =============================================================
@@ -110,7 +159,7 @@ def main():
         print("No parts to search. Exiting.")
         return
 
-    print(f"Loaded {len(parts)} part numbers.")
+    print(f"Loaded {len(parts)} part number(s) to scrape.")
     print(f"Output directory: {OUTPUT_DIR}")
 
     # Run each scraper. They write their own CSVs and are fully
